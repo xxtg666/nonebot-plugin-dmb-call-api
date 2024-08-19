@@ -2,6 +2,7 @@ from nonebot import on_command
 from nonebot.permission import SUPERUSER
 from nonebot.adapters import Message
 from nonebot.params import CommandArg, ArgPlainText
+from nonebot.exception import FinishedException
 from pydantic import BaseModel
 from nonebot import get_plugin_config
 import traceback
@@ -22,6 +23,7 @@ bots = config["discord-bots"]
 process = {}
 dca = on_command("dmb-call-api", aliases={"dca"}, priority=0, block=True, permission=SUPERUSER)
 dcac = on_command("dca-call", aliases={"dcac"}, priority=0, block=True, permission=SUPERUSER)
+
 
 @dca.handle()
 async def handle_function(event, args: Message = CommandArg()):
@@ -62,6 +64,7 @@ async def got_bot(event, botid: str = ArgPlainText()):
     headers = {"Authorization": f"Bot {bots[botid]}"}
     global process
     process[event.get_user_id()] = [headers]
+
 
 @dcac.got("method", prompt="请输入请求方法:\nGET, POST, PUT, PATCH, DELETE\n使用 CANCEL 取消")
 async def got_method(event, method: str = ArgPlainText()):
@@ -112,6 +115,8 @@ async def got_data(event, data: str = ArgPlainText()):
             try:
                 r = await client.request(method, url, headers=headers, json=data)
                 await dca.finish(f"{r.json()}", at_sender=True)
+            except FinishedException:
+                pass
             except Exception:
                 await dca.finish(traceback.format_exc().split("\n")[-2], reply_message=True)
         del process[event.get_user_id()]
