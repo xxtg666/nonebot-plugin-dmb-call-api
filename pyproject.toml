@@ -1,0 +1,17 @@
+[project]
+name = "nonebot-plugin-dmb-call-api"
+
+version = "1.0.0"
+
+description = "Call-Api for Discord Message Bridge"
+authors = [
+    { name = "xxtg666", email = "xxtg666@gmail.com" }
+]
+dependencies = [
+    "nonebot2",
+    "httpx",
+    "pyyaml"
+]
+requires-python = ">=3.9"
+readme = "README.md"
+license = { text = "MIT" }
