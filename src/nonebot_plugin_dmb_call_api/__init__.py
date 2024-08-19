@@ -50,9 +50,9 @@ call <bot-id> - 调用 Discord Api''', reply_message=True)
         case "call":
             if len(action) < 2:
                 await dca.finish("参数错误", reply_message=True)
-            if action[1] not in bots:
+            if int(action[1]) not in bots:
                 await dca.finish("Bot 不存在", reply_message=True)
-            headers = {"Authorization ": f"Bot {bots[action[1]]}"}
+            headers = {"Authorization ": f"Bot {bots[int(action[1])]}"}
             global process
             process[event.get_user_id()] = [headers]
 
