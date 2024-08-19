@@ -20,7 +20,7 @@ with open(env.dmb_forwards_config_file, 'r', encoding='utf-8') as f:
 bots = config["discord-bots"]
 
 process = {}
-dca = on_command("dmb-call-api", aliases={"dca"}, priority=10, block=True, permission=SUPERUSER)
+dca = on_command("dmb-call-api", aliases={"dca"}, priority=0, block=True, permission=SUPERUSER)
 
 
 @dca.handle()
