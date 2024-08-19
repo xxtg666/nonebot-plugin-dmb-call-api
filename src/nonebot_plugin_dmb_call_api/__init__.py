@@ -21,7 +21,7 @@ bots = config["discord-bots"]
 
 process = {}
 dca = on_command("dmb-call-api", aliases={"dca"}, priority=0, block=True, permission=SUPERUSER)
-
+dcac = on_command("dca-call", aliases={"dcac"}, priority=0, block=True, permission=SUPERUSER)
 
 @dca.handle()
 async def handle_function(event, args: Message = CommandArg()):
@@ -31,9 +31,9 @@ async def handle_function(event, args: Message = CommandArg()):
     match action[0]:
         case "help":
             await dca.finish('''可用选项有:
-help - 显示此消息
-list - 显示可用的 Bot 列表
-call <bot-id> - 调用 Discord Api''', reply_message=True)
+.dca help - 显示此消息
+.dca list - 显示可用的 Bot 列表
+.dcac - 调用 Discord Api''', reply_message=True)
         case "list":
             reply = ""
             async with httpx.AsyncClient() as client:
@@ -47,17 +47,23 @@ call <bot-id> - 调用 Discord Api''', reply_message=True)
                         reply += "  获取用户信息失败\n"
                     reply += "\n"
             await dca.finish(reply, reply_message=True)
-        case "call":
-            if len(action) < 2:
-                await dca.finish("参数错误", reply_message=True)
-            if int(action[1]) not in bots:
-                await dca.finish("Bot 不存在", reply_message=True)
-            headers = {"Authorization": f"Bot {bots[int(action[1])]}"}
-            global process
-            process[event.get_user_id()] = [headers]
 
 
-@dca.got("method", prompt="请输入请求方法:\nGET, POST, PUT, PATCH, DELETE\n使用 CANCEL 取消")
+@dcac.got("botid", prompt="请输入 Bot ID:\n使用 CANCEL 取消")
+async def got_bot(event, botid: str = ArgPlainText()):
+    if botid.upper() == "CANCEL":
+        await dca.finish("已取消", reply_message=True)
+    try:
+        botid = int(botid)
+    except Exception:
+        await dca.reject_arg("参数类型错误, 应为 int", reply_message=True)
+    if botid not in bots:
+        await dca.reject_arg("Bot 不存在", reply_message=True)
+    headers = {"Authorization": f"Bot {bots[botid]}"}
+    global process
+    process[event.get_user_id()] = [headers]
+
+@dcac.got("method", prompt="请输入请求方法:\nGET, POST, PUT, PATCH, DELETE\n使用 CANCEL 取消")
 async def got_method(event, method: str = ArgPlainText()):
     global process
     method = method.upper()
@@ -69,7 +75,7 @@ async def got_method(event, method: str = ArgPlainText()):
     process[event.get_user_id()].append(method)
 
 
-@dca.got("url", prompt="请输入请求地址:\n可以省略 Base URL\n使用 CANCEL 取消")
+@dcac.got("url", prompt="请输入请求地址:\n可以省略 Base URL\n使用 CANCEL 取消")
 async def got_url(event, url: str = ArgPlainText()):
     global process
     if url.upper() == "CANCEL":
@@ -80,10 +86,10 @@ async def got_url(event, url: str = ArgPlainText()):
     elif url.startswith("/"):
         process[event.get_user_id()].append(f"https://discord.com/api/v9{url}")
     else:
-        await dca.reject_arg("请求地址错误! 请重新输入")
+        await dca.reject_arg("请求地址错误! 请重新输入", reply_message=True)
 
 
-@dca.got("data", prompt="请输入请求数据(body,application/json):\n不需要请输入 NONE\n使用 CANCEL 取消")
+@dcac.got("data", prompt="请输入请求数据(body,application/json):\n不需要请输入 NONE\n使用 CANCEL 取消")
 async def got_data(event, data: str = ArgPlainText()):
     global process
     if data.upper() == "CANCEL":
@@ -97,15 +103,15 @@ async def got_data(event, data: str = ArgPlainText()):
             if type(data) == dict:
                 process[event.get_user_id()].append(data)
             else:
-                await dca.reject_arg("数据类型应为 dict\n请求数据错误! 请重新输入")
+                await dca.reject_arg("数据类型应为 dict\n请求数据错误! 请重新输入", reply_message=True)
         except Exception:
-            await dca.reject_arg(traceback.format_exc().split("\n")[-2] + "\n请求数据错误! 请重新输入")
+            await dca.reject_arg(traceback.format_exc().split("\n")[-2] + "\n请求数据错误! 请重新输入", reply_message=True)
     if len(process[event.get_user_id()]) == 4:
         headers, method, url, data = process[event.get_user_id()]
         async with httpx.AsyncClient() as client:
             try:
                 r = await client.request(method, url, headers=headers, json=data)
-                await dca.finish(f"{r.json()}", reply_message=True)
+                await dca.finish(f"{r.json()}", at_sender=True)
             except Exception:
                 await dca.finish(traceback.format_exc().split("\n")[-2], reply_message=True)
         del process[event.get_user_id()]
